@@ -1,55 +1,50 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: N/A → 1.0.0 (initial version based on detailed input)
+- Modified principles: N/A (new constitution)
+- Added sections: All principles and sections based on user input:
+  - Spec-driven development before implementation
+  - Simplicity and clarity for console-based interaction
+  - Clean code and single-responsibility design
+  - Predictable and deterministic behavior
+  - AI-assisted development using Qwen with human-readable specs
+  - Task validation and unique identification
+  - Technology and Implementation Standards
+  - Project Structure and Workflow Standards
+- Removed sections: N/A
+- Templates requiring updates: ⚠ pending - .specify/templates/plan-template.md (Constitution Check section should align with new principles), .specify/templates/spec-template.md (may need alignment with new constraints), .specify/templates/tasks-template.md (may need alignment with new workflow standards)
+- Follow-up TODOs: RATIFICATION_DATE needs to be set when constitution is officially adopted
+-->
+
+# Todo In-Memory Python Console Application (Phase I) Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Spec-driven development before implementation
+All features must be defined in specifications before coding begins. This ensures clear requirements, testable outcomes, and predictable development process.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Simplicity and clarity for console-based interaction
+Console output must be readable and consistent, with clear user interaction patterns that prioritize user experience in command-line environment.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Clean code and single-responsibility design
+Code must be modular and maintainable, with each component having a single, well-defined responsibility to ensure clarity and testability.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Predictable and deterministic behavior
+Application must exhibit consistent behavior with no hidden logic outside defined specifications, ensuring reliable operation and easy debugging.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### AI-assisted development using Qwen with human-readable specs
+Leverage AI tools like Qwen with human-readable specifications to accelerate development while maintaining clear documentation and traceability.
 
-### [PRINCIPLE_6_NAME]
+### Task validation and unique identification
+Each task must have a unique identifier and all task operations must validate task existence to prevent errors and ensure data integrity.
 
+## Technology and Implementation Standards
+Python 3.13+ compatibility with in-memory data storage only. No external databases or APIs. Python standard library preferred. Graceful handling of invalid input. No application crashes due to user error. Language: Python. Runtime: Console/CLI. Package management: UV. AI tools: Qwen, Spec-Kit Plus. No UI frameworks. No persistent storage.
 
-[PRINCIPLE__DESCRIPTION]
-
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Project Structure and Workflow Standards
+Constitution file at repository root. Specs-history folder containing all spec iterations. Src folder containing all Python source code. Clear separation between business logic and I/O. README.md with setup and execution instructions. Specification workflow: /sp.constitution defines guiding principles, /sp.specify defines system behavior, /sp.plan breaks requirements into implementation steps, /sp.build implements code following specs. All spec files preserved for traceability.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+All features must be defined in specs before coding. Each task must have a unique identifier. All task operations must validate task existence. Console output must be readable and consistent. Code must be modular and maintainable. No hidden logic outside defined specifications. Functional scope includes: Add Task (title required, description optional), View Task List with status indicators, Update Task details by ID, Delete Task by ID, Mark Task as Complete/Incomplete. Success criteria: All 5 core features function correctly, application runs without errors, specs fully describe system behavior, code aligns with specifications, reviewer can understand system without running code.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): Original adoption date unknown | **Last Amended**: 2025-12-28
