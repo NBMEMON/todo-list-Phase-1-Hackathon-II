@@ -5,6 +5,11 @@ This module contains helper functions for input validation, output formatting,
 and other utility operations.
 """
 
+try:
+    from ..lib.display import format_task_line_with_color
+except ImportError:
+    from src.lib.display import format_task_line_with_color
+
 
 def validate_task_title(title):
     """
@@ -29,8 +34,8 @@ def format_task_display(task):
     Returns:
         str: Formatted string representation of the task
     """
-    status_indicator = "✓" if task.completed else "○"
-    return f"[{status_indicator}] {task.id}. {task.title} - {task.description if task.description else '(No description)'}"
+    # Use the legacy format for backward compatibility with existing tests
+    return str(task)
 
 
 def format_task_list_display(tasks):
@@ -49,6 +54,40 @@ def format_task_list_display(tasks):
     formatted_tasks = []
     for task in tasks:
         formatted_tasks.append(format_task_display(task))
+
+    return "\n".join(formatted_tasks)
+
+
+def format_task_display_enhanced(task):
+    """
+    Format a task for display with clear status indicators, priority, and tags.
+
+    Args:
+        task (Task): The task to format
+
+    Returns:
+        str: Formatted string representation of the task with priority and tags
+    """
+    # Use the new display formatting that includes due dates and recurrence indicators
+    return format_task_line_with_color(task)
+
+
+def format_task_list_display_enhanced(tasks):
+    """
+    Format a list of tasks for display with priority and tags.
+
+    Args:
+        tasks (list): List of Task objects to format
+
+    Returns:
+        str: Formatted string with all tasks including priority and tags
+    """
+    if not tasks:
+        return "No tasks found."
+
+    formatted_tasks = []
+    for task in tasks:
+        formatted_tasks.append(format_task_display_enhanced(task))
 
     return "\n".join(formatted_tasks)
 

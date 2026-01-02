@@ -3,252 +3,334 @@
 Main entry point for the Todo Console Application.
 
 This module implements the CLI interface for the todo application,
-providing a menu-driven interface for all task operations.
+providing subcommands and flags for all task operations.
 """
 
+import argparse
 import sys
-from services import TaskService
-from utils import (
-    display_menu,
-    get_user_choice,
-    get_valid_task_id_input,
-    format_task_list_display,
-    confirm_action,
-    validate_task_title
-)
+
+# Handle both relative imports (when run as module) and absolute imports (when run directly)
+try:
+    # Try relative imports first (for when run as module)
+    from .services import TaskService
+    from .utils import format_task_list_display, format_task_list_display_enhanced
+    from .models.task import Task
+    from .services_pkg.date_utils import parse_natural_date
+    from .lib.display import print_task_list
+except ImportError:
+    try:
+        # Try absolute imports (for when run directly)
+        from services import TaskService
+        from utils import format_task_list_display, format_task_list_display_enhanced
+        from models.task import Task
+        from services_pkg.date_utils import parse_natural_date
+        from lib.display import print_task_list
+    except ImportError:
+        # If both fail, try with src prefix (for when run from project root)
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        from src.services import TaskService
+        from src.utils import format_task_list_display, format_task_list_display_enhanced
+        from src.models.task import Task
+        from src.services_pkg.date_utils import parse_natural_date
+        from src.lib.display import print_task_list
 
 
-class TodoApp:
-    """
-    Main application class that handles the CLI interface and user interactions.
-    """
+def create_parser():
+    """Create and configure the argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Todo Console Application - Manage your tasks with priorities and tags"
+    )
 
-    def __init__(self):
-        """
-        Initialize the TodoApp with a TaskService instance.
-        """
-        self.task_service = TaskService()
+    # Create subparsers for different commands
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    def run(self):
-        """
-        Run the main application loop with menu options.
-        """
-        print("Welcome to the Todo Console Application!")
-        print("Type '6' or 'exit' to quit the application at any time.")
+    # Add command
+    add_parser = subparsers.add_parser('add', help='Add a new task')
+    add_parser.add_argument('title', help='Task title')
+    add_parser.add_argument('description', nargs='?', default='', help='Task description (optional)')
+    add_parser.add_argument('--priority', '-p', choices=['high', 'medium', 'low'],
+                           default='medium', help='Task priority (default: medium)')
+    add_parser.add_argument('--tag', '-t', action='append', dest='tags',
+                           help='Add a tag to the task (can be used multiple times)')
+    add_parser.add_argument('--due', '-d', help='Due date in natural language (e.g., "tomorrow 3pm", "next monday")')
+    add_parser.add_argument('--recurring', choices=['daily', 'weekly', 'monthly', 'yearly'],
+                           help='Recurrence pattern for the task')
+    add_parser.add_argument('--recurring-days', help='Days for weekly recurrence (e.g., "mon,tue,wed")')
+    add_parser.add_argument('--show-after-add', action='store_true',
+                           help='Show the task list after adding the task')
 
-        while True:
-            try:
-                display_menu()
-                choice = get_user_choice(1, 6, "Select an option (1-6): ")
+    # View command (same as list but with simpler interface)
+    view_parser = subparsers.add_parser('view', help='View all tasks')
+    view_parser.add_argument('--status', choices=['done', 'pending', 'all'],
+                            default='all', help='Filter by status (default: all)')
+    view_parser.add_argument('--priority', choices=['high', 'medium', 'low', 'all'],
+                            help='Filter by priority')
+    view_parser.add_argument('--tag', help='Filter by tag')
+    view_parser.add_argument('--sort', choices=['id', 'priority', 'title', 'created'],
+                            default='id', help='Sort by (default: id)')
+    view_parser.add_argument('--order', choices=['asc', 'desc'],
+                            default='asc', help='Sort order (default: asc)')
+    view_parser.add_argument('--overdue', action='store_true', help='Show only overdue tasks')
+    view_parser.add_argument('--due-today', action='store_true', help='Show only tasks due today')
 
-                if choice is None:
-                    continue
+    # List command
+    list_parser = subparsers.add_parser('list', help='List all tasks')
+    list_parser.add_argument('--status', choices=['done', 'pending', 'all'],
+                            default='all', help='Filter by status (default: all)')
+    list_parser.add_argument('--priority', choices=['high', 'medium', 'low', 'all'],
+                            help='Filter by priority')
+    list_parser.add_argument('--tag', help='Filter by tag')
+    list_parser.add_argument('--sort', choices=['id', 'priority', 'title', 'created'],
+                            default='id', help='Sort by (default: id)')
+    list_parser.add_argument('--order', choices=['asc', 'desc'],
+                            default='asc', help='Sort order (default: asc)')
+    list_parser.add_argument('--overdue', action='store_true', help='Show only overdue tasks')
+    list_parser.add_argument('--due-today', action='store_true', help='Show only tasks due today')
 
-                if choice == 1:
-                    self.add_task()
-                elif choice == 2:
-                    self.view_tasks()
-                elif choice == 3:
-                    self.update_task()
-                elif choice == 4:
-                    self.delete_task()
-                elif choice == 5:
-                    self.mark_task_status()
-                elif choice == 6:
-                    self.exit_app()
-                    break
-                else:
-                    print("Invalid option. Please select a number between 1 and 6.")
+    # Search command
+    search_parser = subparsers.add_parser('search', help='Search tasks by keyword')
+    search_parser.add_argument('keyword', help='Keyword to search for')
 
-            except KeyboardInterrupt:
-                print("\n\nApplication interrupted by user. Exiting...")
-                sys.exit(0)
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
-                print("Please try again.")
+    # Update command
+    update_parser = subparsers.add_parser('update', help='Update an existing task')
+    update_parser.add_argument('id', type=int, help='Task ID to update')
+    update_parser.add_argument('title', nargs='?', help='New task title (optional)')
+    update_parser.add_argument('description', nargs='?', help='New task description (optional)')
+    update_parser.add_argument('--priority', '-p', choices=['high', 'medium', 'low'],
+                              help='New priority level')
+    update_parser.add_argument('--add-tag', action='append', dest='add_tags',
+                              help='Add a tag to the task (can be used multiple times)')
+    update_parser.add_argument('--remove-tag', action='append', dest='remove_tags',
+                              help='Remove a tag from the task (can be used multiple times)')
+    update_parser.add_argument('--due', '-d', help='Update due date in natural language (e.g., "tomorrow 3pm", "next monday")')
+    update_parser.add_argument('--recurring', choices=['daily', 'weekly', 'monthly', 'yearly'],
+                              help='Update recurrence pattern for the task')
+    update_parser.add_argument('--recurring-days', help='Update days for weekly recurrence (e.g., "mon,tue,wed")')
 
-    def add_task(self):
-        """
-        Add a new task with required title and optional description.
-        """
-        print("\n--- Add New Task ---")
+    # Delete command
+    delete_parser = subparsers.add_parser('delete', help='Delete a task')
+    delete_parser.add_argument('id', type=int, help='Task ID to delete')
 
-        title = input("Enter task title: ").strip()
+    # Done command
+    done_parser = subparsers.add_parser('done', help='Mark a task as complete')
+    done_parser.add_argument('id', type=int, help='Task ID to mark complete')
 
-        # Validate title
-        if not validate_task_title(title):
-            print("Error: Task title cannot be empty.")
-            return
+    # Undone command
+    undone_parser = subparsers.add_parser('undone', help='Mark a task as incomplete')
+    undone_parser.add_argument('id', type=int, help='Task ID to mark incomplete')
 
-        description = input("Enter task description (optional): ").strip()
-
-        try:
-            task = self.task_service.add_task(title, description)
-            print(f"Task '{task.title}' added successfully with ID {task.id}")
-        except ValueError as e:
-            print(f"Error adding task: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred while adding task: {e}")
-
-    def view_tasks(self):
-        """
-        Display all tasks with clear status indicators.
-        """
-        print("\n--- View All Tasks ---")
-
-        tasks = self.task_service.get_all_tasks()
-
-        if not tasks:
-            print("No tasks found.")
-            return
-
-        print("\nCurrent Tasks:")
-        print(format_task_list_display(tasks))
-        print(f"\nTotal tasks: {len(tasks)}")
-
-    def update_task(self):
-        """
-        Update an existing task by its unique ID.
-        """
-        print("\n--- Update Task ---")
-
-        tasks = self.task_service.get_all_tasks()
-        if not tasks:
-            print("No tasks available to update.")
-            return
-
-        print("Current tasks:")
-        print(format_task_list_display(tasks))
-
-        task_id = get_valid_task_id_input("Enter the ID of the task to update: ", tasks)
-        if task_id is None:
-            return
-
-        task = self.task_service.get_task_by_id(task_id)
-        if not task:
-            print(f"Task with ID {task_id} not found.")
-            return
-
-        print(f"Current task: {task}")
-
-        new_title = input(f"Enter new title (leave blank to keep '{task.title}'): ").strip()
-        new_description = input(f"Enter new description (leave blank to keep '{task.description}'): ").strip()
-
-        # Use current values if user input is blank
-        update_title = new_title if new_title else None
-        update_description = new_description if new_description else None
-
-        try:
-            if self.task_service.update_task(task_id, update_title, update_description):
-                updated_task = self.task_service.get_task_by_id(task_id)
-                print(f"Task with ID {task_id} updated successfully.")
-                print(f"Updated task: {updated_task}")
-            else:
-                print(f"Failed to update task with ID {task_id}.")
-        except ValueError as e:
-            print(f"Error updating task: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred while updating task: {e}")
-
-    def delete_task(self):
-        """
-        Delete a task by its unique ID.
-        """
-        print("\n--- Delete Task ---")
-
-        tasks = self.task_service.get_all_tasks()
-        if not tasks:
-            print("No tasks available to delete.")
-            return
-
-        print("Current tasks:")
-        print(format_task_list_display(tasks))
-
-        task_id = get_valid_task_id_input("Enter the ID of the task to delete: ", tasks)
-        if task_id is None:
-            return
-
-        task = self.task_service.get_task_by_id(task_id)
-        if not task:
-            print(f"Task with ID {task_id} not found.")
-            return
-
-        print(f"Task to delete: {task}")
-
-        if not confirm_action("Are you sure you want to delete this task?"):
-            print("Task deletion cancelled.")
-            return
-
-        if self.task_service.delete_task(task_id):
-            print(f"Task with ID {task_id} deleted successfully.")
-        else:
-            print(f"Failed to delete task with ID {task_id}.")
-
-    def mark_task_status(self):
-        """
-        Mark a task as complete or incomplete by its unique ID.
-        """
-        print("\n--- Mark Task Complete/Incomplete ---")
-
-        tasks = self.task_service.get_all_tasks()
-        if not tasks:
-            print("No tasks available to update.")
-            return
-
-        print("Current tasks:")
-        print(format_task_list_display(tasks))
-
-        task_id = get_valid_task_id_input("Enter the ID of the task to update status: ", tasks)
-        if task_id is None:
-            return
-
-        task = self.task_service.get_task_by_id(task_id)
-        if not task:
-            print(f"Task with ID {task_id} not found.")
-            return
-
-        print(f"Current task: {task}")
-
-        # Determine current status and ask for new status
-        current_status = "Complete" if task.completed else "Incomplete"
-        new_status = input(f"Mark as (c)omplete or (i)nc. Leave blank to keep current status '{current_status}': ").strip().lower()
-
-        if new_status in ['c', 'complete', 'completed']:
-            if self.task_service.mark_task_complete(task_id):
-                print(f"Task with ID {task_id} marked as complete.")
-            else:
-                print(f"Failed to mark task with ID {task_id} as complete.")
-        elif new_status in ['i', 'incomplete', 'incompleted', 'not complete']:
-            if self.task_service.mark_task_incomplete(task_id):
-                print(f"Task with ID {task_id} marked as incomplete.")
-            else:
-                print(f"Failed to mark task with ID {task_id} as incomplete.")
-        elif new_status == "":
-            print("Status unchanged.")
-        else:
-            print("Invalid input. Task status unchanged.")
-
-    def exit_app(self):
-        """
-        Exit the application gracefully.
-        """
-        print("\nThank you for using the Todo Console Application!")
-        print("Goodbye!")
+    return parser
 
 
 def main():
-    """
-    Main entry point of the application.
-    """
+    """Main entry point of the application."""
+    parser = create_parser()
+    args = parser.parse_args()
+
+    # Initialize the task service
+    task_service = TaskService()
+
     try:
-        app = TodoApp()
-        app.run()
-    except KeyboardInterrupt:
-        print("\n\nApplication interrupted by user. Exiting...")
-        sys.exit(0)
+        if args.command == 'add':
+            # Process tags from command line
+            tags = set(args.tags) if args.tags else set()
+
+            # Process due date if provided
+            due_date = None
+            if args.due:
+                due_date = parse_natural_date(args.due)
+                if due_date is None:
+                    print(f"Error: Could not parse due date '{args.due}'. Please use formats like 'tomorrow', 'next monday', '2026-01-15', etc.")
+                    return
+
+            # Process recurrence if provided
+            recurrence = args.recurring
+            recurrence_config = {}
+            if args.recurring_days and recurrence == 'weekly':
+                # Parse recurring days (e.g., "mon,tue,wed")
+                day_map = {
+                    'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3,
+                    'fri': 4, 'sat': 5, 'sun': 6,
+                    'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                    'friday': 4, 'saturday': 5, 'sunday': 6
+                }
+                days = []
+                for day in args.recurring_days.split(','):
+                    day = day.strip().lower()
+                    if day in day_map:
+                        days.append(day_map[day])
+                    else:
+                        print(f"Error: Invalid day '{day}' in recurring days. Use mon, tue, wed, thu, fri, sat, sun")
+                        return
+                recurrence_config = {'days': days}
+
+            # Create the task with new fields
+            task = task_service.add_task(
+                title=args.title,
+                description=args.description,
+                priority=args.priority,
+                tags=tags,
+                due=due_date,
+                recurrence=recurrence,
+                recurrence_config=recurrence_config
+            )
+            print(f"Task '{task.title}' added successfully with ID {task.id}")
+
+            # Always show the task list after adding (as requested by user)
+            print("\nCurrent task list:")
+            print_task_list(task_service.get_all_tasks())
+
+        elif args.command == 'view' or args.command == 'list':
+            # Get all tasks first
+            all_tasks = task_service.get_all_tasks()
+
+            # Handle special filters for overdue and due-today
+            if args.overdue:
+                print_task_list(all_tasks, show_overdue=True)
+                return
+            elif args.due_today:
+                print_task_list(all_tasks, show_due_today=True)
+                return
+
+            # Apply filters if specified
+            if args.status != 'all' or args.priority or args.tag:
+                filtered_tasks = task_service.task_list.filter_tasks(
+                    status=args.status if args.status != 'all' else None,
+                    priority=args.priority if args.priority != 'all' else None,
+                    tag=args.tag
+                )
+            else:
+                filtered_tasks = all_tasks
+
+            # Apply sorting to the filtered results
+            if args.sort == 'id':
+                sorted_tasks = sorted(filtered_tasks, key=lambda t: t.id, reverse=(args.order == 'desc'))
+            elif args.sort == 'priority':
+                priority_order = {"high": 0, "medium": 1, "low": 2}
+                sorted_tasks = sorted(filtered_tasks, key=lambda t: priority_order[t.priority], reverse=(args.order == 'desc'))
+            elif args.sort == 'title':
+                sorted_tasks = sorted(filtered_tasks, key=lambda t: t.title.lower(), reverse=(args.order == 'desc'))
+            elif args.sort == 'created':
+                sorted_tasks = sorted(filtered_tasks, key=lambda t: t.created_at, reverse=(args.order == 'desc'))
+            else:  # Default to sorting by ID
+                sorted_tasks = sorted(filtered_tasks, key=lambda t: t.id, reverse=(args.order == 'desc'))
+
+            if not sorted_tasks:
+                print("No tasks match your criteria.")
+            else:
+                print_task_list(sorted_tasks)
+
+        elif args.command == 'search':
+            if not args.keyword:
+                print("Error: Search keyword cannot be empty")
+                return
+
+            # Use the search functionality from TaskList
+            matching_tasks = task_service.task_list.search_tasks(args.keyword)
+
+            if not matching_tasks:
+                print("No tasks match your search.")
+            else:
+                print_task_list(matching_tasks)
+
+        elif args.command == 'update':
+            # Process due date if provided
+            due_date = None
+            if args.due:
+                due_date = parse_natural_date(args.due)
+                if due_date is None:
+                    print(f"Error: Could not parse due date '{args.due}'. Please use formats like 'tomorrow', 'next monday', '2026-01-15', etc.")
+                    return
+
+            # Process recurrence if provided
+            recurrence = args.recurring
+            recurrence_config = None
+            if args.recurring_days and recurrence == 'weekly':
+                # Parse recurring days (e.g., "mon,tue,wed")
+                day_map = {
+                    'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3,
+                    'fri': 4, 'sat': 5, 'sun': 6,
+                    'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                    'friday': 4, 'saturday': 5, 'sunday': 6
+                }
+                days = []
+                for day in args.recurring_days.split(','):
+                    day = day.strip().lower()
+                    if day in day_map:
+                        days.append(day_map[day])
+                    else:
+                        print(f"Error: Invalid day '{day}' in recurring days. Use mon, tue, wed, thu, fri, sat, sun")
+                        return
+                recurrence_config = {'days': days}
+
+            # Prepare update parameters
+            title = args.title if hasattr(args, 'title') and args.title is not None else None
+            description = args.description if hasattr(args, 'description') and args.description is not None else None
+
+            # Update the task
+            success = task_service.update_task(
+                args.id,
+                title=title,
+                description=description,
+                priority=args.priority,
+                add_tags=set(args.add_tags) if args.add_tags else None,
+                remove_tags=set(args.remove_tags) if args.remove_tags else None,
+                due=due_date,
+                recurrence=recurrence,
+                recurrence_config=recurrence_config
+            )
+
+            if success:
+                task = task_service.get_task_by_id(args.id)
+                if task:
+                    print(f"Task with ID {args.id} updated successfully.")
+                    print(f"Updated task: {task}")
+                else:
+                    print(f"Task with ID {args.id} updated successfully.")
+            else:
+                print(f"Task with ID {args.id} not found.")
+
+        elif args.command == 'delete':
+            success = task_service.delete_task(args.id)
+            if success:
+                print(f"Task with ID {args.id} deleted successfully.")
+            else:
+                print(f"Task with ID {args.id} not found.")
+
+        elif args.command == 'done':
+            success = task_service.mark_task_complete(args.id)
+            if success:
+                print(f"Task with ID {args.id} marked as complete.")
+            else:
+                print(f"Task with ID {args.id} not found.")
+
+        elif args.command == 'undone':
+            success = task_service.mark_task_incomplete(args.id)
+            if success:
+                print(f"Task with ID {args.id} marked as incomplete.")
+            else:
+                print(f"Task with ID {args.id} not found.")
+
+        elif args.command is None:
+            # No command provided, show help
+            parser.print_help()
+
+        else:
+            print(f"Unknown command: {args.command}")
+            parser.print_help()
+
+    except ValueError as e:
+        print(f"Error: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         sys.exit(1)
+
+
+def main_entry():
+    """Entry point for uv and other package managers."""
+    main()
 
 
 if __name__ == "__main__":
