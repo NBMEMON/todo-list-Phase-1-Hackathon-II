@@ -330,6 +330,107 @@ def main():
 
 def main_entry():
     """Entry point for uv and other package managers."""
+    import sys
+    import os
+
+    # Add the project root to the Python path to ensure imports work
+    # This is needed when the script is run as an installed command
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
+    main()
+
+
+def add_cmd():
+    """Entry point for the 'add' command."""
+    import sys
+    # Set sys.argv to simulate the 'add' command
+    if len(sys.argv) > 1 and sys.argv[1] != 'add':
+        # Insert 'add' as the command if not already present
+        sys.argv.insert(1, 'add')
+    else:
+        # Ensure the command is 'add'
+        if len(sys.argv) == 1:
+            sys.argv.append('add')
+    main()
+
+
+def delete_cmd():
+    """Entry point for the 'delete' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'delete':
+        sys.argv.insert(1, 'delete')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('delete')
+    main()
+
+
+def view_cmd():
+    """Entry point for the 'view' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'view':
+        sys.argv.insert(1, 'view')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('view')
+    main()
+
+
+def list_cmd():
+    """Entry point for the 'list' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'list':
+        sys.argv.insert(1, 'list')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('list')
+    main()
+
+
+def search_cmd():
+    """Entry point for the 'search' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'search':
+        sys.argv.insert(1, 'search')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('search')
+    main()
+
+
+def update_cmd():
+    """Entry point for the 'update' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'update':
+        sys.argv.insert(1, 'update')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('update')
+    main()
+
+
+def done_cmd():
+    """Entry point for the 'done' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'done':
+        sys.argv.insert(1, 'done')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('done')
+    main()
+
+
+def undone_cmd():
+    """Entry point for the 'undone' command."""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] != 'undone':
+        sys.argv.insert(1, 'undone')
+    else:
+        if len(sys.argv) == 1:
+            sys.argv.append('undone')
     main()
 
 

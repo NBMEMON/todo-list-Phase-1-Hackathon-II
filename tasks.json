@@ -13,19 +13,6 @@
     "next_due": null
   },
   {
-    "id": 2,
-    "title": "Second Task",
-    "description": "Another persistent task",
-    "completed": false,
-    "created_at": "2026-01-02T17:09:18.270757",
-    "priority": "high",
-    "tags": [],
-    "due": null,
-    "recurrence": null,
-    "recurrence_config": {},
-    "next_due": null
-  },
-  {
     "id": 3,
     "title": "Test Task for Completion",
     "description": "Task to test completion status",
@@ -42,8 +29,21 @@
     "id": 4,
     "title": "Make a dish",
     "description": "",
-    "completed": false,
+    "completed": true,
     "created_at": "2026-01-02T17:14:38.707795",
+    "priority": "medium",
+    "tags": [],
+    "due": null,
+    "recurrence": null,
+    "recurrence_config": {},
+    "next_due": null
+  },
+  {
+    "id": 5,
+    "title": "kela",
+    "description": "",
+    "completed": false,
+    "created_at": "2026-01-02T21:10:22.247963",
     "priority": "medium",
     "tags": [],
     "due": null,

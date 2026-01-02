@@ -9,7 +9,18 @@ dependencies = [
 ]
 
 [project.scripts]
-todo = "src.main:main"
+todo = "src.main:main_entry"
+add = "src.main:add_cmd"
+delete = "src.main:delete_cmd"
+view = "src.main:view_cmd"
+list = "src.main:list_cmd"
+search = "src.main:search_cmd"
+update = "src.main:update_cmd"
+done = "src.main:done_cmd"
+undone = "src.main:undone_cmd"
+
+[tool.setuptools.packages.find]
+include = ["src*", "console_scripts*"]
 
 [build-system]
 requires = ["setuptools>=45", "wheel"]
